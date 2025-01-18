@@ -229,7 +229,7 @@ public:
 	void setEditLinkCallback(
 		Fn<bool(
 			EditLinkSelection selection,
-			TextWithTags text,
+			QString text,
 			QString link,
 			EditLinkAction action)> callback);
 	void setEditLanguageCallback(
@@ -256,7 +256,7 @@ public:
 		const QString &customEmojiData);
 	void commitMarkdownLinkEdit(
 		EditLinkSelection selection,
-		const TextWithTags &textWithTags,
+		const QString &text,
 		const QString &link);
 	[[nodiscard]] static bool IsValidMarkdownLink(QStringView link);
 	[[nodiscard]] static bool IsCustomEmojiLink(QStringView link);
@@ -541,7 +541,7 @@ private:
 
 	Fn<bool(
 		EditLinkSelection selection,
-		TextWithTags text,
+		QString text,
 		QString link,
 		EditLinkAction action)> _editLinkCallback;
 	Fn<void(QString now, Fn<void(QString)> save)> _editLanguageCallback;
