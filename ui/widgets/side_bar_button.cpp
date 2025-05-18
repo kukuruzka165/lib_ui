@@ -137,7 +137,7 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
 		: _st.iconPosition.y();
 
 	if (_active) {
-		const int capsulePaddingH = 4;
+		const int capsulePaddingH = 8;
 		const int capsulePaddingV = -4;
 		const int capsuleWidth = icon.width() + 2 * capsulePaddingH;
 		const int capsuleHeight = icon.height() + 2 * capsulePaddingV;
