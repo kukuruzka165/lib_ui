@@ -25,6 +25,7 @@
 #include <QtGui/QWindow>
 #include <QtWidgets/QApplication>
 #include <private/qapplication_p.h>
+#include <qpa/qplatformwindow_p.h>
 
 namespace Ui {
 namespace {
@@ -225,6 +226,15 @@ void PopupMenu::init() {
 		if (!bottom.isEmpty()) {
 			p.fillRect(bottom, _st.menu.itemBg);
 		}
+	}, paddingWrap->lifetime());
+
+	rpl::combine(
+		_scroll->scrollTopValue(),
+		_scroll->heightValue(),
+		_menu->heightValue()
+	) | rpl::on_next([=](int scrollTop, int scrollHeight, int) {
+		const auto scrollBottom = scrollTop + scrollHeight;
+		paddingWrap->setVisibleTopBottom(scrollTop, scrollBottom);
 	}, paddingWrap->lifetime());
 
 	_menu->scrollToRequests(
@@ -521,7 +531,9 @@ void PopupMenu::handleActivated(const Menu::CallbackData &data) {
 void PopupMenu::handleTriggered(const Menu::CallbackData &data) {
 	if (!popupSubmenuFromAction(data)) {
 		_triggering = true;
-		hideMenu();
+		if (!data.preventClose) {
+			hideMenu();
+		}
 		data.action->trigger();
 		_triggering = false;
 		if (_deleteLater) {
@@ -908,6 +920,22 @@ void PopupMenu::deleteOnHide(bool del) {
 	_deleteOnHide = del;
 }
 
+QPoint PopupMenu::ConstrainToParentScreen(
+		not_null<PopupMenu*> menu,
+		QPoint globalPos) {
+	auto result = globalPos;
+	if (const auto parent = menu->parentWidget()) {
+		if (const auto parentScreen = parent->window()->screen()) {
+			const auto r = parentScreen->availableGeometry();
+			if (!r.contains(result)) {
+				result.setX(std::clamp(result.x(), r.left(), r.right()));
+				result.setY(std::clamp(result.y(), r.top(), r.bottom()));
+			}
+		}
+	}
+	return result;
+}
+
 void PopupMenu::popup(const QPoint &p) {
 	if (prepareGeometryFor(p)) {
 		popupPrepared();
@@ -1012,6 +1040,38 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
 			0),
 		_padding.top() - _topShift);
 	auto r = screen ? screen->availableGeometry() : QRect();
+#if QT_VERSION >= QT_VERSION_CHECK(6, 11, 0) && defined QT_FEATURE_wayland && QT_CONFIG(wayland)
+	using namespace QNativeInterface::Private;
+	if (const auto native
+			= windowHandle()->nativeInterface<QWaylandWindow>()) {
+		const auto padding = _additionalMenuPadding - _additionalMenuMargins;
+		base::take(r);
+		if (_parent) {
+			// we must have an action to position the submenu around
+			const auto action = not_null(
+				_parent->menu()->findSelectedAction());
+			native->setParentControlGeometry(
+				QRect(
+					action->mapTo(action->window(), QPoint()),
+					action->size()) + _st.scrollPadding);
+		} else if (padding.top()) {
+			// provide the compositor with a range for flip_y so it uses
+			// the cursor point instead of the padding's top point
+			native->setParentControlGeometry(
+				QRect(
+					p
+						- parentWidget()->window()->pos()
+						- QPoint(padding.left(), padding.top()),
+					QSize(1, padding.top())));
+			windowHandle()->setProperty(
+				"_q_waylandPopupAnchor",
+				QVariant::fromValue(Qt::TopEdge | Qt::LeftEdge));
+		}
+		native->setExtendedWindowType(_parent
+			? QWaylandWindow::SubMenu
+			: QWaylandWindow::Menu);
+	}
+#endif // Qt >= 6.11.0 && wayland
 	const auto parentWidth = _parent ? _parent->inner().width() : 0;
 	if (style::RightToLeft()) {
 		const auto badLeft = !r.isNull() && w.x() - width() < r.x() - _margins.left();

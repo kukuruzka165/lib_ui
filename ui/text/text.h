@@ -32,6 +32,7 @@ namespace Ui {
 class SpoilerMessCached;
 
 extern const QString kQEllipsis;
+extern const QString kQBullet;
 
 inline constexpr auto kQFixedMax = (INT_MAX / 256);
 
@@ -321,6 +322,11 @@ public:
 	[[nodiscard]] bool hasSpoilers() const;
 	void setSpoilerRevealed(bool revealed, anim::type animated);
 	void setSpoilerLinkFilter(Fn<bool(const ClickContext&)> filter);
+
+	[[nodiscard]] bool hasCustomEmoji() const;
+	void setCustomEmojiClickHandler(
+		Fn<bool(QStringView)> predicate,
+		Fn<void(QStringView, ClickContext)> callback);
 
 	[[nodiscard]] bool hasCollapsedBlockquots() const;
 	[[nodiscard]] bool blockquoteCollapsed(int index) const;
