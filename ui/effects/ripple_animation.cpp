@@ -85,7 +85,7 @@ RippleAnimation::Ripple::Ripple(
 			_radiusTo,
 			style::point::dotProduct(_origin - point, _origin - point));
 	}
-	_radiusTo = qRound(sqrt(float64(_radiusTo)) / 0.55);
+	_radiusTo = int(base::SafeRound(sqrt(float64(_radiusTo)) / 0.55));
 
 	const auto w = _frame.width();
 	const auto h = _frame.height();

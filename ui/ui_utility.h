@@ -24,6 +24,7 @@ class object_ptr;
 namespace Ui {
 
 inline constexpr auto kPixelToAngleDelta = 2;
+inline constexpr auto kMagicScrollMultiplier = 2.5;
 
 template <typename Widget, typename ...Args>
 inline base::unique_qptr<Widget> CreateObject(Args &&...args) {
@@ -74,6 +75,11 @@ void SendPendingMoveResizeEvents(not_null<QWidget*> target);
 	not_null<QWidget*> target,
 	QRect rect = QRect(),
 	QColor bg = QColor(255, 255, 255, 0));
+
+[[nodiscard]] QPixmap GrabOpaque(
+	not_null<QWidget*> target,
+	QRect rect,
+	QColor bg);
 
 void RenderWidget(
 	QPainter &painter,
@@ -140,7 +146,7 @@ void SetGeometryAndScreen(
 
 class ScrollDirectionLock final {
 public:
-	[[nodiscard]] std::optional<Qt::Orientation> update(
+	std::optional<Qt::Orientation> update(
 		Qt::ScrollPhase phase,
 		QPointF delta);
 
@@ -152,5 +158,21 @@ private:
 };
 
 [[nodiscard]] QColor BlendColors(QColor color1, QColor color2, float64 ratio);
+
+struct RowsRange {
+	int from = 0;
+	int till = 0;
+};
+
+[[nodiscard]] inline RowsRange RowsInRange(
+		int top,
+		int bottom,
+		int rowHeight,
+		int count) {
+	return {
+		.from = std::clamp(top / rowHeight, 0, count),
+		.till = std::clamp((bottom + rowHeight - 1) / rowHeight, 0, count),
+	};
+}
 
 } // namespace Ui
